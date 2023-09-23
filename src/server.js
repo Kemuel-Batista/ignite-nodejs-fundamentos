@@ -1,16 +1,26 @@
-// CommonJS => require
-//const http = require('http');
-// ESModules => import/export -> por padrão o nodejs não suporta, "type": "module", in package.json
-// O prefixo node: na importação de um módulo serve para informar que esse módulo é interno do Node.js
 import http from 'node:http';
 
-/**
- *  Criar um usuario (name, email, senha) => request -> BODY, PARAMS, 
- *  Devolver uma resposta -> response
-*/
+const users = [];
 
 const server = http.createServer((request, response) => {
-    return response.end("Hello World!")
+    const { method, url } = request;
+
+    if(method === 'GET' && url === '/users') {
+        return response
+            .setHeader('Content-Type', 'application/json')
+            .end(JSON.stringify(users));
+    }
+    if(method === 'POST' && url === '/users') {
+        users.push({
+            id: 1,
+            name: 'John Doe',
+            email: 'john.doe@gmail.com'
+        })
+
+        return response.writeHead(201).end();
+    }
+
+    return response.writeHead(404).end()
 })
 
 server.listen(3333);
