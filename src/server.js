@@ -1,36 +1,30 @@
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { json } from './middlewares/json.js';
-import { Database } from './database.js';
+import { routes } from './routes.js';
+import { extractQueryParams } from './utils/extract-query-params.js';
 
-// UUID => Unique Universal ID
+const server = http.createServer(async (req, res) => {
+  const { method, url } = req;
 
-const database = new Database();
+  await json(req, res)
 
-const server = http.createServer(async (request, response) => {
-  const { method, url } = request;
+  const route = routes.find(route => {
+    // route.path.test -> estamos testando se a url passada é igual ao regex informado
+    return route.method === method && route.path.test(url);
+  })
 
-  await json(request, response)
+  if(route){
+    const routeParams = req.url.match(route.path) // 'UUID do usuário em rotas do tipo /users/:id'
 
-  if (method === 'GET' && url === '/users') {
-    const users = database.select('users');
+    const { query, ...params } = routeParams.groups
 
-    return response.end(JSON.stringify(users));
-  }
-  if (method === 'POST' && url === '/users') {
-    const { name, email } = request.body;
-    const user = {
-      id: randomUUID(),
-      name,
-      email
-    }
+    req.params = params
+    req.query = query ? extractQueryParams(query) : {}
 
-    database.insert('users', user)
-
-    return response.writeHead(201).end();
+    return route.handler(req, res)
   }
 
-  return response.writeHead(404).end()
+  return res.writeHead(404).end()
 })
 
 server.listen(3333);
